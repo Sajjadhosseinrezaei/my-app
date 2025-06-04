@@ -1,33 +1,32 @@
 <template>
   <v-container>
-    <v-row>
-      <v-col cols="12">
-        <v-card>
-          <v-card-title>
-            مدیریت کاربران
-            <v-spacer />
-            <v-btn color="primary" @click="showForm = true">
+    <v-row justify="center">
+      <v-col cols="12" md="10">
+        <v-card elevation="3" class="rounded-lg">
+          <v-card-title class="bg-primary text-white d-flex justify-space-between">
+            <span>مدیریت کاربران</span>
+            <v-btn color="white" variant="outlined" @click="showForm = true" prepend-icon="mdi-account-plus">
               کاربر جدید
             </v-btn>
           </v-card-title>
 
           <v-card-text>
-            <v-alert v-if="error" type="error" dense>{{ error }}</v-alert>
+            <v-alert v-if="error" type="error" dense class="mb-4">{{ error }}</v-alert>
 
             <v-progress-linear
               v-if="loading"
               indeterminate
               color="primary"
-              class="mb-3"
+              class="mb-4"
             />
 
-            <v-table v-if="!loading && users.length">
-              <thead>
+            <v-table v-if="!loading && users.length" class="elevation-1 rounded-lg">
+              <thead class="bg-grey-lighten-3">
                 <tr>
-                  <th>نام کاربری</th>
-                  <th>ایمیل</th>
-                  <th>نقش</th>
-                  <th>اقدامات</th>
+                  <th class="text-right">نام کاربری</th>
+                  <th class="text-right">ایمیل</th>
+                  <th class="text-right">نقش</th>
+                  <th class="text-right">اقدامات</th>
                 </tr>
               </thead>
               <tbody>
@@ -36,40 +35,59 @@
                   <td>{{ user.email }}</td>
                   <td>{{ user.role || '---' }}</td>
                   <td>
-                    <v-btn icon color="blue" @click="editUser(user)">
+                    <v-btn icon variant="text" color="blue-darken-2" @click="editUser(user)">
                       <v-icon>mdi-pencil</v-icon>
                     </v-btn>
-                    <v-btn icon color="red" @click="deleteUser(user.id)">
+                    <v-btn icon variant="text" color="red-darken-2" @click="deleteUser(user.id)">
                       <v-icon>mdi-delete</v-icon>
                     </v-btn>
                   </td>
                 </tr>
               </tbody>
             </v-table>
+
+            <v-alert v-else type="info" class="mt-4">کاربری یافت نشد.</v-alert>
           </v-card-text>
         </v-card>
       </v-col>
     </v-row>
 
-    <!-- Form Dialog -->
-    <v-dialog v-model="showForm" max-width="500px">
-      <v-card>
-        <v-card-title>{{ form.id ? 'ویرایش کاربر' : 'کاربر جدید' }}</v-card-title>
+    <!-- فرم افزودن / ویرایش کاربر -->
+    <v-dialog v-model="showForm" max-width="500px" persistent>
+      <v-card class="rounded-lg">
+        <v-card-title class="text-h6">
+          {{ form.id ? 'ویرایش کاربر' : 'افزودن کاربر جدید' }}
+        </v-card-title>
+
         <v-card-text>
-          <v-text-field v-model="form.username" label="نام کاربری" required />
-          <v-text-field v-model="form.email" label="ایمیل" required />
+          <v-text-field
+            v-model="form.username"
+            label="نام کاربری"
+            prepend-inner-icon="mdi-account"
+            required
+          />
+          <v-text-field
+            v-model="form.email"
+            label="ایمیل"
+            prepend-inner-icon="mdi-email"
+            required
+          />
           <v-text-field
             v-if="!form.id"
             v-model="form.password"
             label="رمز عبور"
+            prepend-inner-icon="mdi-lock"
             type="password"
             required
           />
         </v-card-text>
+
         <v-card-actions>
           <v-spacer />
-          <v-btn @click="showForm = false">لغو</v-btn>
-          <v-btn color="primary" @click="saveUser">ذخیره</v-btn>
+          <v-btn variant="outlined" @click="closeForm">لغو</v-btn>
+          <v-btn color="primary" @click="saveUser" :loading="saving">
+            ذخیره
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -82,6 +100,7 @@ import API from '../services/api'
 
 const users = ref([])
 const loading = ref(false)
+const saving = ref(false)
 const error = ref('')
 const showForm = ref(false)
 
@@ -106,6 +125,7 @@ const fetchUsers = async () => {
 }
 
 const saveUser = async () => {
+  saving.value = true
   try {
     if (form.value.id) {
       await API.put(`/accounts/manager/${form.value.id}/`, {
@@ -115,11 +135,12 @@ const saveUser = async () => {
     } else {
       await API.post('/accounts/manager/', form.value)
     }
-    showForm.value = false
-    form.value = { id: null, username: '', email: '', password: '' }
+    closeForm()
     fetchUsers()
   } catch {
     error.value = 'خطا در ذخیره کاربر'
+  } finally {
+    saving.value = false
   }
 }
 
@@ -134,7 +155,7 @@ const editUser = (user) => {
 }
 
 const deleteUser = async (id) => {
-  if (confirm('آیا مطمئنی می‌خواهی کاربر را حذف کنی؟')) {
+  if (confirm('آیا مطمئن هستید که می‌خواهید این کاربر را حذف کنید؟')) {
     try {
       await API.delete(`/accounts/manager/${id}/`)
       fetchUsers()
@@ -142,6 +163,11 @@ const deleteUser = async (id) => {
       error.value = 'خطا در حذف کاربر'
     }
   }
+}
+
+const closeForm = () => {
+  showForm.value = false
+  form.value = { id: null, username: '', email: '', password: '' }
 }
 
 onMounted(fetchUsers)

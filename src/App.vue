@@ -1,5 +1,6 @@
 <template>
   <v-app>
+    <BaseHeader/>
     <v-main>
       <router-view />
     </v-main>
@@ -8,6 +9,7 @@
 
 <script setup>
   //
+  import BaseHeader from './components/BaseHeader.vue';
 </script>
 <style>
 html, body {
