@@ -69,7 +69,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import API from '../services/api'
+import { api } from '@/stores/auth'
 
 const projects = ref([])
 const loading = ref(false)
@@ -85,7 +85,7 @@ const fetchProjects = async () => {
   loading.value = true
   error.value = ''
   try {
-    const res = await API.get('/project-manager/')
+    const res = await api.get('/project-manager/')
     projects.value = res.data
   } catch (err) {
     error.value = 'خطا در دریافت پروژه‌ها'
@@ -97,9 +97,9 @@ const fetchProjects = async () => {
 const saveProject = async () => {
   try {
     if (form.value.id) {
-      await API.put(`/project-manager/${form.value.id}/`, form.value)
+      await api.put(`/project-manager/${form.value.id}/`, form.value)
     } else {
-      await API.post('/project-manager/', form.value)
+      await api.post('/project-manager/', form.value)
     }
     showForm.value = false
     form.value = { id: null, title: '', description: '' }
@@ -117,7 +117,7 @@ const editProject = (project) => {
 const deleteProject = async (id) => {
   if (confirm('آیا مطمئنی که می‌خواهی حذف کنی؟')) {
     try {
-      await API.delete(`/project-manager/${id}/`)
+      await api.delete(`/project-manager/${id}/`)
       fetchProjects()
     } catch {
       error.value = 'خطا در حذف پروژه'

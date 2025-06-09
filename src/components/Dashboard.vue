@@ -1,7 +1,6 @@
 <template>
   <v-container fluid class="pa-6">
     <v-row>
-      <!-- کارت خوش‌آمدگویی -->
       <v-col cols="12">
         <v-card class="pa-6 glass-effect" elevation="4">
           <v-row align="center">
@@ -27,7 +26,6 @@
         </v-card>
       </v-col>
 
-      <!-- کارت آمار تسک‌ها -->
       <v-col cols="12" md="6" lg="4">
         <v-card class="pa-5" color="blue-lighten-5" elevation="3">
           <v-card-title class="text-h6 text-blue-darken-3 d-flex align-center">
@@ -39,29 +37,24 @@
               <v-col cols="6">
                 <v-sheet class="pa-4 text-center" color="green-lighten-4" rounded="lg">
                   <v-icon size="32" color="green">mdi-check-circle</v-icon>
-                  <div class="mt-2 text-caption">تسک‌های انجام شده</div>
-                  <div class="text-h5 font-weight-bold">{{ dashboard.completed_tasks }}</div>
+                  <div class="mt-2 text-body-2">تسک‌های انجام شده</div>
+                  <div class="text-h5 font-weight-bold">{{ dashboardData.completed_tasks }}</div>
                 </v-sheet>
               </v-col>
               <v-col cols="6">
                 <v-sheet class="pa-4 text-center" color="orange-lighten-4" rounded="lg">
                   <v-icon size="32" color="orange">mdi-progress-clock</v-icon>
-                  <div class="mt-2 text-caption">تسک‌های در حال انجام</div>
-                  <div class="text-h5 font-weight-bold">{{ dashboard.pending_tasks }}</div>
+                  <div class="mt-2 text-body-2">تسک‌های در حال انجام</div>
+                  <div class="text-h5 font-weight-bold">{{ dashboardData.pending_tasks }}</div>
                 </v-sheet>
               </v-col>
             </v-row>
-            <!-- نمودار دایره‌ای -->
-            <v-sheet class="mt-4" color="transparent">
-              <div class="chart-container">
-                <chartjs :config="taskChartConfig" />
-              </div>
-            </v-sheet>
+            <v-sheet class="mt-4 chart-container" color="transparent">
+              </v-sheet>
           </v-card-text>
         </v-card>
       </v-col>
 
-      <!-- کارت پروژه‌های فعال -->
       <v-col cols="12" md="6" lg="8">
         <v-card class="pa-5" color="purple-lighten-5" elevation="3">
           <v-card-title class="text-h6 text-purple-darken-3 d-flex align-center">
@@ -78,7 +71,7 @@
               hide-details
               class="mb-4"
             />
-            <v-list v-if="filteredProjects.length > 0" class="pa-0">
+            <v-list v-if="filteredProjects.length > 0" class="pa-0 bg-transparent">
               <v-list-item
                 v-for="project in filteredProjects"
                 :key="project.id"
@@ -91,7 +84,7 @@
                   <v-list-item-title class="font-weight-bold">
                     {{ project.title }}
                   </v-list-item-title>
-                  <v-list-item-subtitle class="text-caption">
+                  <v-list-item-subtitle class="text-body-2">
                     {{ project.description }}
                   </v-list-item-subtitle>
                   <v-progress-linear
@@ -103,26 +96,20 @@
                   />
                 </v-list-item-content>
                 <v-list-item-action>
-                  <v-btn icon small>
+                  <v-btn icon small variant="text">
                     <v-icon color="primary">mdi-chevron-left</v-icon>
                   </v-btn>
                 </v-list-item-action>
               </v-list-item>
             </v-list>
-            <v-alert
-              v-else
-              type="info"
-              variant="outlined"
-              text
-              class="mt-2"
-            >
+            <v-alert v-else type="info" variant="outlined" text class="mt-2">
               پروژه‌ای برای نمایش وجود ندارد.
+              <v-btn to="/projects/new" variant="text" color="primary">افزودن پروژه جدید</v-btn>
             </v-alert>
           </v-card-text>
         </v-card>
       </v-col>
 
-      <!-- کارت فعالیت‌های اخیر -->
       <v-col cols="12">
         <v-card class="pa-5" color="grey-lighten-4" elevation="3">
           <v-card-title class="text-h6 text-grey-darken-3 d-flex align-center">
@@ -130,14 +117,14 @@
             فعالیت‌های اخیر
           </v-card-title>
           <v-card-text>
-            <v-timeline dense side="end">
+            <v-timeline dense side="end" truncate-line="both">
               <v-timeline-item
                 v-for="activity in recentActivities"
                 :key="activity.id"
-                :dot-color="activity.color"
-                small
+                :dot-color="activity.color || 'grey'"
+                size="small"
               >
-                <v-card class="pa-3" elevation="0">
+                <v-card class="pa-3" elevation="0" color="transparent">
                   <div class="text-body-2">{{ activity.text }}</div>
                   <div class="text-caption text-grey">{{ activity.time }}</div>
                 </v-card>
@@ -147,84 +134,77 @@
         </v-card>
       </v-col>
     </v-row>
+
+    <v-dialog v-model="loading" persistent width="auto">
+      <v-card class="pa-4 text-center" rounded="lg">
+        <v-progress-circular indeterminate color="primary" class="mb-3" />
+        <div>در حال بارگذاری اطلاعات...</div>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
-
 <script setup>
-import { onMounted, ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import API from '../services/api'
+import { useAuthStore } from '@/stores/auth'
+import { api } from '@/stores/auth' 
 
-const dashboard = ref({
+const router = useRouter()
+const authStore = useAuthStore() 
+
+const userName = computed(() => authStore.user?.username || 'کاربر')
+const projectFilter = ref('')
+const loading = ref(true)
+
+// این ref برای نگهداری تمام داده‌های دریافتی از اندپوینت داشبورد است
+const dashboardData = ref({
   completed_tasks: 0,
   pending_tasks: 0,
   projects: [],
+  recent_activities: [], // اگر از API نیامد، خالی می‌ماند
 })
 
-const userName = ref('کاربر نمونه')
-const projectFilter = ref('')
-const router = useRouter()
-
-const recentActivities = ref([
-  { id: 1, text: 'تسک "طراحی UI" تکمیل شد', time: '۱ ساعت پیش', color: 'green' },
-  { id: 2, text: 'پروژه جدید "وب‌سایت فروش" اضافه شد', time: '۲ ساعت پیش', color: 'blue' },
-  { id: 3, text: 'کاربر جدید به تیم اضافه شد', time: 'دیروز', color: 'purple' },
-])
-
+// این computed property ها بدون تغییر باقی می‌مانند چون به dashboardData وابسته هستند
 const filteredProjects = computed(() => {
-  if (!projectFilter.value) return dashboard.value.projects
-  return dashboard.value.projects.filter(project =>
-    project.title.toLowerCase().includes(projectFilter.value.toLowerCase()) ||
-    project.description.toLowerCase().includes(projectFilter.value.toLowerCase())
-  )
+  return (dashboardData.value.projects || []).filter(project => {
+    const title = project.title?.toLowerCase() || ''
+    const desc = project.description?.toLowerCase() || ''
+    const search = projectFilter.value.toLowerCase()
+    return title.includes(search) || desc.includes(search)
+  })
 })
 
-const taskChartConfig = computed(() => ({
-  type: 'doughnut',
-  data: {
-    labels: ['تسک‌های انجام شده', 'تسک‌های در حال انجام'],
-    datasets: [{
-      data: [dashboard.value.completed_tasks, dashboard.value.pending_tasks],
-      backgroundColor: ['#4CAF50', '#FF9800'],
-      borderWidth: 1,
-    }],
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'bottom',
-        labels: {
-          color: '#424242',
-          font: { size: 12 },
-        },
-      },
-    },
-  },
-}))
+const recentActivities = computed(() => dashboardData.value.recent_activities)
 
-const fetchDashboard = async () => {
+// --- تابع اصلی که ساده‌سازی و اصلاح شده است ---
+const fetchDashboardData = async () => {
+  loading.value = true
   try {
-    const token = localStorage.getItem('token')
-    const response = await API.get('/dashboard/', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    dashboard.value = response.data
+    // ۱. فقط یک درخواست به اندپوینت اصلی داشبورد ارسال می‌شود
+    const response = await api.get('/dashboard/');
+    
+    // ۲. داده‌های دریافت شده مستقیماً در state قرار می‌گیرند
+    //    استفاده از || [] و || 0 باعث می‌شود اگر کلیدی در پاسخ نبود، برنامه خطا ندهد
+    dashboardData.value = {
+      completed_tasks: response.data.completed_tasks || 0,
+      pending_tasks: response.data.pending_tasks || 0,
+      projects: response.data.projects || [],
+      recent_activities: response.data.recent_activities || [] 
+    };
+
   } catch (error) {
-    console.error('خطا در دریافت اطلاعات داشبورد', error)
+    console.error('خطا در دریافت اطلاعات داشبورد:', error)
+  } finally {
+    loading.value = false
   }
 }
 
 const viewProject = (id) => {
-  router.push(`/projects/${id}`)
+  router.push(`/project-manager/${id}`)
 }
 
-onMounted(() => {
-  fetchDashboard()
-})
+onMounted(fetchDashboardData)
 </script>
-
 <style scoped>
 .glass-effect {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));

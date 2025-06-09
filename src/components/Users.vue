@@ -96,8 +96,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import API from '../services/api'
-
+import { api } from '@/stores/auth'
 const users = ref([])
 const loading = ref(false)
 const saving = ref(false)
@@ -115,7 +114,7 @@ const fetchUsers = async () => {
   loading.value = true
   error.value = ''
   try {
-    const res = await API.get('/accounts/manager/')
+    const res = await api.get('/accounts/manager/')
     users.value = res.data
   } catch (err) {
     error.value = 'خطا در دریافت کاربران'
@@ -128,12 +127,12 @@ const saveUser = async () => {
   saving.value = true
   try {
     if (form.value.id) {
-      await API.put(`/accounts/manager/${form.value.id}/`, {
+      await api.put(`/accounts/manager/${form.value.id}/`, {
         username: form.value.username,
         email: form.value.email,
       })
     } else {
-      await API.post('/accounts/manager/', form.value)
+      await api.post('/accounts/manager/', form.value)
     }
     closeForm()
     fetchUsers()
@@ -157,7 +156,7 @@ const editUser = (user) => {
 const deleteUser = async (id) => {
   if (confirm('آیا مطمئن هستید که می‌خواهید این کاربر را حذف کنید؟')) {
     try {
-      await API.delete(`/accounts/manager/${id}/`)
+      await api.delete(`/accounts/manager/${id}/`)
       fetchUsers()
     } catch {
       error.value = 'خطا در حذف کاربر'
