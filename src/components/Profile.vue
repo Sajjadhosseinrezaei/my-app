@@ -53,6 +53,7 @@
                 variant="outlined"
                 :error-messages="passwordErrors.old_password"
                 class="mb-4"
+                autocomplete="current-password"
               />
               <v-text-field
                 v-model="passwordForm.new_password"
@@ -61,6 +62,7 @@
                 variant="outlined"
                 :error-messages="passwordErrors.new_password"
                 class="mb-4"
+                autocomplete="new-password"
               />
               <v-btn
                 type="submit"
@@ -91,7 +93,6 @@ import { api } from '@/stores/auth';
 const authStore = useAuthStore();
 
 // --- State for Profile Form ---
-// تغییر ۲: به‌روزرسانی state برای استفاده از name
 const profileForm = ref({
   name: '',
   email: '',
@@ -117,7 +118,6 @@ const snackbar = ref({
 // Populate form with current user data when component mounts
 onMounted(() => {
   if (authStore.user) {
-    // تغییر ۳: خواندن name از store به جای username
     profileForm.value.name = authStore.user.name;
     profileForm.value.email = authStore.user.email;
   }
@@ -127,10 +127,17 @@ onMounted(() => {
 const handleProfileUpdate = async () => {
   profileLoading.value = true;
   profileErrors.value = {};
+
+  if (!authStore.user || !authStore.user.id) {
+    showSnackbar('اطلاعات کاربری یافت نشد.', 'error');
+    profileLoading.value = false;
+    return;
+  }
+  
   try {
-    // تغییر ۴: ارسال کل فرم (شامل name و email) به سرور
-    const response = await api.patch('/accounts/profile/', profileForm.value);
-    // Update user info in the store to reflect changes everywhere
+    const userId = authStore.user.id;
+    const response = await api.patch(`/accounts/manager/${userId}/`, profileForm.value);
+    
     authStore.updateUserData(response.data);
     showSnackbar('اطلاعات با موفقیت به‌روز شد.', 'success');
   } catch (err) {

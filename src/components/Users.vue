@@ -23,7 +23,7 @@
             <v-table v-if="!loading && users.length" class="elevation-1 rounded-lg">
               <thead class="bg-grey-lighten-3">
                 <tr>
-                  <th class="text-right">نام کاربری</th>
+                  <th class="text-right">نام</th>
                   <th class="text-right">ایمیل</th>
                   <th class="text-right">نقش</th>
                   <th class="text-right">اقدامات</th>
@@ -31,9 +31,9 @@
               </thead>
               <tbody>
                 <tr v-for="user in users" :key="user.id">
-                  <td>{{ user.username }}</td>
+                  <td>{{ user.name }}</td>
                   <td>{{ user.email }}</td>
-                  <td>{{ user.role || '---' }}</td>
+                  <td>{{ user.is_staff ? 'ادمین' : 'کاربر' }}</td>
                   <td>
                     <v-btn icon variant="text" color="blue-darken-2" @click="editUser(user)">
                       <v-icon>mdi-pencil</v-icon>
@@ -52,7 +52,6 @@
       </v-col>
     </v-row>
 
-    <!-- فرم افزودن / ویرایش کاربر -->
     <v-dialog v-model="showForm" max-width="500px" persistent>
       <v-card class="rounded-lg">
         <v-card-title class="text-h6">
@@ -61,24 +60,27 @@
 
         <v-card-text>
           <v-text-field
-            v-model="form.username"
-            label="نام کاربری"
+            v-model="form.name"
+            label="نام"
             prepend-inner-icon="mdi-account"
             required
+            class="mb-2"
           />
           <v-text-field
             v-model="form.email"
             label="ایمیل"
             prepend-inner-icon="mdi-email"
             required
+            class="mb-2"
           />
           <v-text-field
-            v-if="!form.id"
             v-model="form.password"
-            label="رمز عبور"
+            :label="form.id ? 'رمز عبور جدید' : 'رمز عبور'"
             prepend-inner-icon="mdi-lock"
             type="password"
-            required
+            :required="!form.id"
+            :hint="form.id ? 'برای عدم تغییر، خالی بگذارید' : ''"
+            persistent-hint
           />
         </v-card-text>
 
@@ -97,6 +99,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { api } from '@/stores/auth'
+
 const users = ref([])
 const loading = ref(false)
 const saving = ref(false)
@@ -105,7 +108,7 @@ const showForm = ref(false)
 
 const form = ref({
   id: null,
-  username: '',
+  name: '', // اصلاح شده از username
   email: '',
   password: ''
 })
@@ -118,6 +121,7 @@ const fetchUsers = async () => {
     users.value = res.data
   } catch (err) {
     error.value = 'خطا در دریافت کاربران'
+    console.error(err);
   } finally {
     loading.value = false
   }
@@ -126,18 +130,28 @@ const fetchUsers = async () => {
 const saveUser = async () => {
   saving.value = true
   try {
+    // تغییر ۲: منطق ذخیره کاربر ویرایش شده
     if (form.value.id) {
-      await api.put(`/accounts/manager/${form.value.id}/`, {
-        username: form.value.username,
+      // ساخت یک payload برای ارسال فقط فیلدهای مورد نیاز
+      const payload = {
+        name: form.value.name,
         email: form.value.email,
-      })
+      };
+      // اگر فیلد پسورد پر شده بود، آن را هم به payload اضافه کن
+      if (form.value.password) {
+        payload.password = form.value.password;
+      }
+      // استفاده از متد PATCH که برای آپدیت‌های جزیی مناسب‌تر است
+      await api.patch(`/accounts/manager/${form.value.id}/`, payload)
     } else {
+      // این بخش برای ساخت کاربر جدید بدون تغییر باقی می‌ماند
       await api.post('/accounts/manager/', form.value)
     }
     closeForm()
-    fetchUsers()
-  } catch {
+    await fetchUsers()
+  } catch(err) {
     error.value = 'خطا در ذخیره کاربر'
+    console.error(err);
   } finally {
     saving.value = false
   }
@@ -146,7 +160,7 @@ const saveUser = async () => {
 const editUser = (user) => {
   form.value = {
     id: user.id,
-    username: user.username,
+    name: user.name, // اصلاح شده از username
     email: user.email,
     password: ''
   }
@@ -154,10 +168,11 @@ const editUser = (user) => {
 }
 
 const deleteUser = async (id) => {
+  // بهتر است از یک کتابخانه برای نمایش دیالوگ تایید استفاده کنید
   if (confirm('آیا مطمئن هستید که می‌خواهید این کاربر را حذف کنید؟')) {
     try {
       await api.delete(`/accounts/manager/${id}/`)
-      fetchUsers()
+      await fetchUsers()
     } catch {
       error.value = 'خطا در حذف کاربر'
     }
@@ -166,7 +181,7 @@ const deleteUser = async (id) => {
 
 const closeForm = () => {
   showForm.value = false
-  form.value = { id: null, username: '', email: '', password: '' }
+  form.value = { id: null, name: '', email: '', password: '' }
 }
 
 onMounted(fetchUsers)
