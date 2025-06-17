@@ -30,10 +30,13 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('refreshToken', refresh)
   }
 
-  function updateUserData(newUserData) {
-        user.value = { ...user.value, ...newUserData };
-        localStorage.setItem('user', JSON.stringify(user.value));
-    }
+// src/stores/auth.js
+
+function updateUserData(newUserData) {
+    // اگر user.value نال بود، از یک آبجکت خالی استفاده کن
+    user.value = { ...(user.value || {}), ...newUserData };
+    localStorage.setItem('user', JSON.stringify(user.value));
+}
 
   async function login(email, password) {
     try {
@@ -74,7 +77,17 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('token');
   }
 
-  return { user, accessToken, refreshToken, isAuthenticated, isAdmin, login, logout, refreshAccessToken, setAuthData }
+  return { user,
+    accessToken,
+    refreshToken,
+    isAuthenticated,
+    isAdmin,
+    login,
+    logout,
+    refreshAccessToken,
+    setAuthData,
+    updateUserData
+  }
 });
 
 

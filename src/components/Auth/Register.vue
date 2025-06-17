@@ -7,13 +7,13 @@
           
           <v-form @submit.prevent="registerUser">
             <v-text-field
-              v-model="form.username"
-              label="نام کاربری"
+              v-model="form.name"
+              label="نام"
               prepend-inner-icon="mdi-account-outline"
               variant="outlined"
               required
               class="mb-3"
-              :error-messages="errors.username"
+              :error-messages="errors.name"
             />
             
             <v-text-field
@@ -39,14 +39,14 @@
             />
 
             <v-text-field
-              v-model="form.password2"
+              v-model="form.passwordConfirm"
               label="تکرار رمز عبور"
               type="password"
               prepend-inner-icon="mdi-lock-check-outline"
               variant="outlined"
               required
               class="mb-3"
-              :error-messages="errors.password2"
+              :error-messages="errors.passwordConfirm"
             />
             
             <v-alert v-if="errors.non_field_errors" type="error" density="compact" variant="tonal" class="mb-4">
@@ -72,42 +72,53 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-// 1. ایمپورت صحیح نمونه api به صورت نام‌گذاری شده (named import)
 import { api } from '@/stores/auth';
 
+// تغییر 2: به‌روزرسانی مدل فرم برای هماهنگی با سریالایزر
 const form = ref({
-  username: '',
+  name: '',
   email: '',
   password: '',
-  password2: '', // فیلد تکرار رمز عبور اضافه شد
+  passwordConfirm: '', // تغییر نام از password2 برای خوانایی بهتر
 });
 
 const loading = ref(false);
-// 2. آبجکتی برای نگهداری خطاهای هر فیلد که از سمت سرور می‌آید
 const errors = ref({}); 
-const router = useRouter(); // 3. برای هدایت کاربر پس از ثبت نام
+const router = useRouter();
 
 const registerUser = async () => {
   loading.value = true;
   errors.value = {}; // پاک کردن خطاهای قبلی
 
+  // تغییر 3: اعتبارسنجی تکرار رمز عبور در سمت کلاینت
+  if (form.value.password !== form.value.passwordConfirm) {
+    errors.value = { passwordConfirm: ['رمزهای عبور با یکدیگر مطابقت ندارند.'] };
+    loading.value = false;
+    return; // متوقف کردن اجرای تابع
+  }
+
   try {
-    // 4. اندپوینت خود را اینجا قرار دهید
-    const response = await api.post('/accounts/manager/', form.value);
+    // تغییر 4: ساخت یک payload که فقط شامل فیلدهای مورد نیاز سریالایزر باشد
+    const payload = {
+      name: form.value.name,
+      email: form.value.email,
+      password: form.value.password,
+    };
+    
+    // فرض می‌شود اندپوینت صحیح است
+    const response = await api.post('/accounts/create/', payload);
     
     console.log('Registration successful:', response.data);
     
-    // 5. بهبود تجربه کاربری: پس از ثبت نام موفق، کاربر را به صفحه لاگین هدایت کن
+    // هدایت کاربر به صفحه لاگین پس از ثبت نام موفق
     router.push('/login');
 
   } catch (error) {
-    // 6. مدیریت هوشمند خطاها
     if (error.response && error.response.status === 400) {
-      // اگر خطای Validation (400) از سمت سرور آمد، آن را در state ذخیره کن
-      // با این کار خطاها زیر فیلدهای مربوطه نمایش داده می‌شوند
+      // خطاها از سمت سرور در state ذخیره می‌شوند
       errors.value = error.response.data;
     } else {
-      // سایر خطاها (مثل خطای سرور 500 یا عدم اتصال)
+      // سایر خطاها
       errors.value = { non_field_errors: ['خطایی در ارتباط با سرور رخ داد. لطفاً دوباره تلاش کنید.'] };
       console.error('Registration failed:', error);
     }

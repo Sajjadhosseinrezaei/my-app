@@ -10,11 +10,10 @@
           <v-card-text>
             <v-form @submit.prevent="handleProfileUpdate">
               <v-text-field
-                v-model="profileForm.username"
-                label="نام کاربری"
+                v-model="profileForm.name"
+                label="نام"
                 variant="outlined"
-                readonly
-                hint="نام کاربری قابل تغییر نیست."
+                :error-messages="profileErrors.name"
                 class="mb-4"
               />
               <v-text-field
@@ -92,8 +91,9 @@ import { api } from '@/stores/auth';
 const authStore = useAuthStore();
 
 // --- State for Profile Form ---
+// تغییر ۲: به‌روزرسانی state برای استفاده از name
 const profileForm = ref({
-  username: '',
+  name: '',
   email: '',
 });
 const profileLoading = ref(false);
@@ -117,7 +117,8 @@ const snackbar = ref({
 // Populate form with current user data when component mounts
 onMounted(() => {
   if (authStore.user) {
-    profileForm.value.username = authStore.user.username;
+    // تغییر ۳: خواندن name از store به جای username
+    profileForm.value.name = authStore.user.name;
     profileForm.value.email = authStore.user.email;
   }
 });
@@ -127,7 +128,8 @@ const handleProfileUpdate = async () => {
   profileLoading.value = true;
   profileErrors.value = {};
   try {
-    const response = await api.patch('/accounts/profile/', { email: profileForm.value.email });
+    // تغییر ۴: ارسال کل فرم (شامل name و email) به سرور
+    const response = await api.patch('/accounts/profile/', profileForm.value);
     // Update user info in the store to reflect changes everywhere
     authStore.updateUserData(response.data);
     showSnackbar('اطلاعات با موفقیت به‌روز شد.', 'success');
