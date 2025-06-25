@@ -25,6 +25,7 @@
     </v-app-bar-nav-icon>
 
     <v-spacer />
+
     <v-btn
       v-for="item in navItems"
       :key="item.title"
@@ -38,19 +39,7 @@
       {{ item.title }}
     </v-btn>
 
-    <v-text-field
-      v-model="searchQuery"
-      placeholder="جستجو..."
-      prepend-inner-icon="mdi-magnify"
-      variant="solo"
-      flat
-      hide-details
-      class="search-bar d-none d-md-flex mx-3"
-      style="max-width: 250px;"
-      @input="handleSearch"
-    />
-
-    <v-menu bottom left offset-y transition="slide-y-transition">
+    <v-spacer /> <v-menu bottom left offset-y transition="slide-y-transition">
       <template #activator="{ props }">
         <v-btn icon v-bind="props" class="mx-1">
           <v-avatar size="32" color="white">
@@ -96,7 +85,7 @@
         @click="drawer = false"
       />
       <v-divider class="my-2" />
-       <v-list-item to="/profile" prepend-icon="mdi-account-outline" title="پروفایل" @click="drawer = false" />
+      <v-list-item to="/profile" prepend-icon="mdi-account-outline" title="پروفایل" @click="drawer = false" />
       <v-list-item @click="handleLogout" prepend-icon="mdi-logout" title="خروج" />
     </v-list>
   </v-navigation-drawer>
@@ -109,7 +98,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useTheme } from 'vuetify'
 
 const drawer = ref(false)
-const searchQuery = ref('')
+// متغیر searchQuery حذف شد
 const router = useRouter()
 const route = useRoute()
 const theme = useTheme()
@@ -117,7 +106,8 @@ const authStore = useAuthStore()
 
 // خواندن اطلاعات از Store
 const isAdmin = computed(() => authStore.isAdmin)
-const userName = computed(() => authStore.user?.username || 'کاربر مهمان')
+// اصلاح شد تا از 'name' استفاده کند
+const userName = computed(() => authStore.user?.name || 'کاربر مهمان')
 const isDark = computed(() => theme.global.name.value === 'dark')
 const currentRoute = computed(() => route.path)
 
@@ -144,15 +134,12 @@ const toggleTheme = () => {
   theme.global.name.value = isDark.value ? 'light' : 'dark'
 }
 
-// تابع صحیح برای خروج از سیستم
 const handleLogout = () => {
   authStore.logout()
   router.push('/login')
 }
 
-const handleSearch = () => {
-  console.log('جستجو:', searchQuery.value)
-}
+// تابع handleSearch حذف شد
 </script>
 
 <style scoped>
@@ -161,14 +148,7 @@ const handleSearch = () => {
   backdrop-filter: blur(8px);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
-.search-bar {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 10px;
-  transition: background 0.3s ease;
-}
-.search-bar:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
+/* استایل‌های search-bar حذف شدند */
 .v-btn {
   transition: all 0.2s ease;
 }
